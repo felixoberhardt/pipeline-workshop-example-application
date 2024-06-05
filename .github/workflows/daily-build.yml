@@ -2,7 +2,7 @@ name: daily build at 11am
 
 on:
   schedule:
-    - cron: '10 8 * * *'
+    - cron: '18 11 * * *'
 
 jobs:
   daily_build:
