@@ -20,7 +20,7 @@ jobs:
     
     steps: 
      - name: print IP address
-       run: echo ${{ env.UAT_IP }}
+       run: echo "${{ env.UAT_IP }}"
        
      - name: lookup if $UAT_IP is accessible
        uses: appleboy/ssh-action@master
@@ -95,18 +95,23 @@ jobs:
           port: ${{ env.UAT_PORT }}
           script: cp -f /home/ec2-user/deployment/target/digibank.war ${{ env.UAT_TOMCAT }}
 
-  e2e-tests:
-     name: "Run end-2-end tests for the ip ${{ github.event.client_payload.sut }}"
+  e2e_tests:
+     needs: [install]
+     name: "Run end-2-end tests for the ip ${{ env.UAT_IP }}"
      runs-on: ubuntu-latest
         
      steps:
       - uses: actions/checkout@v3
-        
-      - name: Check IP
-        run: echo "${{ github.event.client_payload.sut }}"
+      
+      - name: Check IP 
+        run: echo "${{ env.UAT_IP }}"
 
       - uses: actions/setup-node@v3
         with:
+          host: ${{ env.UAT_IP }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ env.UAT_PORT }}
           node-version: 20
           cache: 'npm'
 
@@ -117,7 +122,7 @@ jobs:
         run: npx playwright install
 
       - name: run the tests
-        run: SUT="http://${{ github.event.client_payload.sut }}:8080/digibank/login" npx playwright test
+        run: SUT="http://${{ env.UAT_IP }}:8080/digibank/login" npx playwright test
              
       - if: always()
         uses: actions/upload-artifact@master
