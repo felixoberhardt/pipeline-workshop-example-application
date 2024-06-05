@@ -1,4 +1,4 @@
-name: ci-cd
+name: build-deploy
 run-name: Build, Deploy to UAT and Test - from user @${{ github.actor }}
 
 on: 
@@ -26,8 +26,8 @@ jobs:
        uses: appleboy/ssh-action@master
        with:
          host: ${{ env.UAT_IP }}
-         username: ${{ secrets.SECRET_NAME }}
-         key: ${{ secrets.SECRET_KEY }}
+         username: ${{ secrets.USER }}
+         key: ${{ secrets.SSH_KEY }}
          port: ${{ env.UAT_PORT }}
     
   build_and_test_and_deploy:
@@ -94,3 +94,33 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ env.UAT_PORT }}
           script: cp -f /home/ec2-user/deployment/target/digibank.war ${{ env.UAT_TOMCAT }}
+
+  e2e-tests:
+     name: "Run end-2-end tests for the ip ${{ github.event.client_payload.sut }}"
+     runs-on: ubuntu-latest
+        
+     steps:
+      - uses: actions/checkout@v3
+        
+      - name: Check IP
+        run: echo "${{ github.event.client_payload.sut }}"
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies and run tests
+        run: npm install
+
+      - name: Install Playwright Dependencies
+        run: npx playwright install
+
+      - name: run the tests
+        run: SUT="http://${{ github.event.client_payload.sut }}:8080/digibank/login" npx playwright test
+             
+      - if: always()
+        uses: actions/upload-artifact@master
+        with:
+          name: test-report.html
+          path: ./playwright-report/index.html
